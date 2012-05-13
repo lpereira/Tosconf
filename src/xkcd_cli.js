@@ -14,112 +14,6 @@ function randomChoice(items) {
 	return items[getRandomInt(0, items.length-1)];
 }
 
-var xkcd = {
-	latest: null,
-	last: null,
-	cache: {},
-	base: 'http://dynamic.xkcd.com/api-0/jsonp/comic/',
-	
-	get: function(num, success, error) {
-		if (num == null) {
-			path = '';
-		} else if (Number(num)) {
-			path = String(num);
-		} else {
-			error(false);
-			return false;
-		}
-		
-		if (num in this.cache) {
-			this.last = this.cache[num];
-			success(this.cache[num]);
-		} else {
-			return $.ajax({
-				url: this.base+path,
-				dataType: 'jsonp',
-				success: $.proxy(function(data) {
-					this.last = this.cache[num] = data;
-					success(data);
-				}, this),
-				error: error});
-		}
-	}
-};
-
-var xkcdDisplay = TerminalShell.commands['display'] = function(terminal, path) {
-	function fail() {
-		terminal.print($('<p>').addClass('error').text('display: unable to open image "'+path+'": No such file or directory.'));
-		terminal.setWorking(false);
-	}
-			
-	if (path) {
-		path = String(path);
-		num = Number(path.match(/^\d+/));
-		filename = pathFilename(path);
-		
-		if (num > xkcd.latest.num) {
-			terminal.print("Time travel mode not enabled.");
-			return;
-		}
-	} else {
-		num = xkcd.last.num;
-	}
-	
-	terminal.setWorking(true);
-	xkcd.get(num, function(data) {
-		if (!filename || (filename == pathFilename(data.img))) {
-			$('<img>')
-				.hide()
-				.load(function() {
-					terminal.print($('<h3>').text(data.num+": "+data.title));
-					$(this).fadeIn();
-					
-					var comic = $(this);
-					if (data.link) {
-						comic = $('<a>').attr('href', data.link).append($(this));
-					}
-					terminal.print(comic);
-					
-					terminal.setWorking(false);
-				})
-				.attr({src:data.img, alt:data.title, title:data.alt})
-				.addClass('comic');
-		} else {
-			fail();
-		}
-	}, fail);
-};
-
-TerminalShell.commands['next'] = function(terminal) {
-	xkcdDisplay(terminal, xkcd.last.num+1);
-};
-
-TerminalShell.commands['previous'] =
-TerminalShell.commands['prev'] = function(terminal) {
-	xkcdDisplay(terminal, xkcd.last.num-1);
-};
-
-TerminalShell.commands['first'] = function(terminal) {
-	xkcdDisplay(terminal, 1);
-};
-
-TerminalShell.commands['latest'] =
-TerminalShell.commands['last'] = function(terminal) {
-	xkcdDisplay(terminal, xkcd.latest.num);
-};
-
-TerminalShell.commands['random'] = function(terminal) {
-	xkcdDisplay(terminal, getRandomInt(1, xkcd.latest.num));
-};
-
-TerminalShell.commands['goto'] = function(terminal, subcmd) {
-	$('#screen').one('cli-ready', function(e) {
-		terminal.print('Did you mean "display"?');
-	});
-	xkcdDisplay(terminal, 292);
-};
-
-
 TerminalShell.commands['sudo'] = function(terminal) {
 	var cmd_args = Array.prototype.slice.call(arguments);
 	cmd_args.shift(); // terminal
@@ -153,7 +47,7 @@ TerminalShell.filters.push(function (terminal, cmd) {
 
 TerminalShell.commands['shutdown'] = TerminalShell.commands['poweroff'] = function(terminal) {
 	if (this.sudo) {
-		terminal.print('Broadcast message from guest@xkcd');
+		terminal.print('Broadcast message from guest@tosconf');
 		terminal.print();
 		terminal.print('The system is going down for maintenance NOW!');
 		return $('#screen').fadeOut();
@@ -187,10 +81,52 @@ function linkFile(url) {
 }
 
 Filesystem = {
-	'welcome.txt': {type:'file', read:function(terminal) {
-		terminal.print($('<h4>').text('Welcome to the unixkcd console.'));
-		terminal.print('To navigate the comics, enter "next", "prev", "first", "last", "display", or "random".');
-		terminal.print('Use "ls", "cat", and "cd" to navigate the filesystem.');
+	'tosconf.txt': {type:'file', read:function(terminal) {
+                terminal.print('');
+                terminal.print($('<pre>').html($('<b>').text('                 O LABORATÓRIO HACKER DE CAMPINAS')));
+                terminal.print('');
+                terminal.print($('<pre>').html($('<b>').text('                          - apresenta -')));
+                terminal.print('');
+                terminal.print('');
+		terminal.print($('<pre>').text(
+			'                 __                         ___\n' +
+			'                / /____  ___ _______  ___  / _/\n' +
+			'               / __/ _ \\(_-</ __/ _ \\/ _ \\/ _/ \n' +
+			'               \\__/\\___/___/\\__/\\___/_//_/_/ [0]  \n\n\n'));
+
+		terminal.print('Use "ls", "cat", e "cd" para acessar o sistema de arquivos.');
+		terminal.print('');
+		terminal.print('  - O arquivo "cfp.txt" contém informações sobre a chamada de trabalhos');
+		terminal.print('  - O arquivo "agenda.txt" contém outras informações úteis');
+		terminal.print('  - O arquivo "palestras.txt" contém palestras já confirmadas');
+	}},
+	'agenda.txt': {type:'file', read:function(terminal) {
+		terminal.print('      Quando? Dia 26/05/2012, no sábado após o Dia da Toalha');
+		terminal.print($('<p>').html('        Onde? <a href="http://lhc.net.br">Na sede do LHC, na Av. Orozimbo Maia, 1264, em Campinas/SP</a>'));
+		terminal.print('      Quanto? De graça. Bebidas serão vendidas na hora para ajudar custear o evento');
+		terminal.print($('<p>').html(' É só chegar? <a href="http://tosconf.lhc.net.br/inscricao">Se inscreva antes, nosso espaço é limitado!</a>'));
+		terminal.print($('<p>').html(' O que é LHC? É um acelerador de partículas^W^W^W<a href="http://lhc.net.br">hackerspace localizado em Campinas</a>, no interior de São Paulo.'));
+	}},
+	'cfp.txt': {type:'file', read:function(terminal) {
+		terminal.print('Estamos abertos à participação de membros de fora da comunidade do LHC. A chamada de ');
+		terminal.print('trabalhos está aberta até dia Primeiro de Abril de 2012: basta preencher o formulário ');
+		terminal.print($('<p>').html('em <a href="http://tosconf.lhc.net.br/cfp">http://tosconf.lhc.net.br/cfp</a> -- não há restrições de assunto.'));
+		terminal.print('');
+		terminal.print('O LHC não fornece ajuda de custos para participantes (exceto uma cerveja gelada como ');
+		terminal.print('token de agradecimento -- caso não consuma bebida alcoólica, favor avisar depois de ');
+		terminal.print('submeter a proposta para tosconf@lhc.net.br).');
+		terminal.print('');
+		terminal.print('A pessoa que mandar a proposta estará inscrita automaticamente no evento.');
+	}},
+	'palestras.txt': {type:'file', read:function(terminal) {
+		terminal.print('* Segurança e Android');
+		terminal.print('* JTAG debug com OpenOCD');
+		terminal.print('* Servidor web de alto desempenho (lwan)');
+		terminal.print('* FINF Is Not FORTH - Ambiente de programação para Arduino que roda no Arduino');
+		terminal.print('* SOPA, ACTA e Afins - Conversa sobre o delicado momento em que vivemos, de acesso universal X indústria tradicional');
+		terminal.print('* Software Defined Radio e Rádio Digital');
+		terminal.print('* Videomapping com Puredata');
+		terminal.print('* Como sobreviver a um ataque de zumbis');
 	}},
 	'license.txt': {type:'file', read:function(terminal) {
 		terminal.print($('<p>').html('Client-side logic for Wordpress CLI theme :: <a href="http://thrind.xamai.ca/">R. McFarland, 2006, 2007, 2008</a>'));
@@ -215,10 +151,7 @@ Filesystem = {
 		});
 	}}
 };
-Filesystem['blog'] = Filesystem['blag'] = linkFile('http://blag.xkcd.com');
-Filesystem['forums'] = Filesystem['fora'] = linkFile('http://forums.xkcd.com/');
-Filesystem['store'] = linkFile('http://store.xkcd.com/');
-Filesystem['about'] = linkFile('http://xkcd.com/about/');
+//Filesystem['blog'] = Filesystem['blag'] = linkFile('http://blag.xkcd.com');
 TerminalShell.pwd = Filesystem;
 
 TerminalShell.commands['cd'] = function(terminal, path) {
@@ -292,20 +225,6 @@ TerminalShell.commands['rm'] = function(terminal, flags, path) {
 	}
 };
 
-TerminalShell.commands['cheat'] = function(terminal) {
-	terminal.print($('<a>').text('*** FREE SHIPPING ENABLED ***').attr('href', 'http://store.xkcd.com/'));
-}; 
-
-TerminalShell.commands['reddit'] = function(terminal, num) {
-	num = Number(num);
-	if (num) {
-		url = 'http://xkcd.com/'+num+'/';
-	} else {
-		var url = window.location;
-	}
-	terminal.print($('<iframe src="http://www.reddit.com/static/button/button1.html?width=140&url='+encodeURIComponent(url)+'&newwindow=1" height="22" width="140" scrolling="no" frameborder="0"></iframe>'));
-};
-
 TerminalShell.commands['wget'] = TerminalShell.commands['curl'] = function(terminal, dest) {
 	if (dest) {
 		terminal.setWorking(true);
@@ -322,25 +241,21 @@ TerminalShell.commands['wget'] = TerminalShell.commands['curl'] = function(termi
 		terminal.print("Please specify a URL.");
 	}
 };
-
+//"
 TerminalShell.commands['write'] =
-TerminalShell.commands['irc'] = function(terminal, nick) {
+TerminalShell.commands['irssi'] = function(terminal, nick) {
 	if (nick) {
 		$('.irc').slideUp('fast', function() {
 			$(this).remove();
 		});
-		var url = "http://widget.mibbit.com/?server=irc.foonetic.net&channel=%23xkcd";
+		var url = "http://webchat.freenode.net/?channels=hackerspace-cps&uio=MTE9MjE131";
 		if (nick) {
 			url += "&nick=" + encodeURIComponent(nick);
 		}
 		TerminalShell.commands['curl'](terminal, url).addClass('irc');
 	} else {
-		terminal.print('usage: irc <nick>');
+		terminal.print('usage: irssi <nick>');
 	}
-};
-
-TerminalShell.commands['unixkcd'] = function(terminal, nick) {
-	TerminalShell.commands['curl'](terminal, "http://www.xkcd.com/unixkcd/");
 };
 
 TerminalShell.commands['apt-get'] = function(terminal, subcmd) {
@@ -412,97 +327,6 @@ TerminalShell.commands['locate'] = function(terminal, what) {
 	if (!oneLiner(terminal, what, keywords)) {
 		terminal.print('Locate what?');
 	}
-};
-
-Adventure = {
-	rooms: {
-		0:{description:'You are at a computer using unixkcd.', exits:{west:1, south:10}},
-		1:{description:'Life is peaceful there.', exits:{east:0, west:2}},
-		2:{description:'In the open air.', exits:{east:1, west:3}},
-		3:{description:'Where the skies are blue.', exits:{east:2, west:4}},
-		4:{description:'This is what we\'re gonna do.', exits:{east:3, west:5}},
-		5:{description:'Sun in wintertime.', exits:{east:4, west:6}},
-		6:{description:'We will do just fine.', exits:{east:5, west:7}},
-		7:{description:'Where the skies are blue.', exits:{east:6, west:8}},
-		8:{description:'This is what we\'re gonna do.', exits:{east:7}},
-		10:{description:'A dark hallway.', exits:{north:0, south:11}, enter:function(terminal) {
-				if (!Adventure.status.lamp) {
-					terminal.print('You are eaten by a grue.');
-					Adventure.status.alive = false;
-					Adventure.goTo(terminal, 666);
-				}
-			}
-		},
-		11:{description:'Bed. This is where you sleep.', exits:{north:10}},
-		666:{description:'You\'re dead!'}
-	},
-	
-	status: {
-		alive: true,
-		lamp: false
-	},
-	
-	goTo: function(terminal, id) {
-		Adventure.location = Adventure.rooms[id];
-		Adventure.look(terminal);
-		if (Adventure.location.enter) {
-			Adventure.location.enter(terminal);
-		}
-	}
-};
-Adventure.location = Adventure.rooms[0];
-
-TerminalShell.commands['look'] = Adventure.look = function(terminal) {
-	terminal.print(Adventure.location.description);	
-	if (Adventure.location.exits) {
-		terminal.print();
-		
-		var possibleDirections = [];
-		$.each(Adventure.location.exits, function(name, id) {
-			possibleDirections.push(name);
-		});
-		terminal.print('Exits: '+possibleDirections.join(', '));
-	}
-};
-
-TerminalShell.commands['go'] = Adventure.go = function(terminal, direction) {
-	if (Adventure.location.exits && direction in Adventure.location.exits) {
-		Adventure.goTo(terminal, Adventure.location.exits[direction]);
-	} else if (!direction) {
-		terminal.print('Go where?');
-	} else if (direction == 'down') {
-		terminal.print("On our first date?");
-	} else {
-		terminal.print('You cannot go '+direction+'.');
-	}
-};
-
-TerminalShell.commands['light'] = function(terminal, what) {
-	if (what == "lamp") {
-		if (!Adventure.status.lamp) {
-			terminal.print('You set your lamp ablaze.');
-			Adventure.status.lamp = true;
-		} else {
-			terminal.print('Your lamp is already lit!');
-		}
-	} else {
-		terminal.print('Light what?');
-	}
-};
-
-TerminalShell.commands['sleep'] = function(terminal, duration) {
-	duration = Number(duration);
-	if (!duration) {
-		duration = 5;
-	}
-	terminal.setWorking(true);
-	terminal.print("You take a nap.");
-	$('#screen').fadeOut(1000);
-	window.setTimeout(function() {
-		terminal.setWorking(false);
-		$('#screen').fadeIn();
-		terminal.print("You awake refreshed.");
-	}, 1000*duration);
 };
 
 // No peeking!
@@ -591,17 +415,7 @@ $(document).ready(function() {
 		Terminal.promptActive = true;
 	}
 	$('#screen').bind('cli-load', function(e) {
-		xkcd.get(null, function(data) {
-			if (data) {
-				xkcd.latest = data;
-				$('#screen').one('cli-ready', function(e) {
-					Terminal.runCommand('cat welcome.txt');
-				});
-				Terminal.runCommand('display '+xkcd.latest.num+'/'+pathFilename(xkcd.latest.img));
-			} else {
-				noData();
-			}
-		}, noData);
+		Terminal.runCommand('cat tosconf.txt');
 	});
 	
 	$(document).konami(function(){
